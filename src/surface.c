@@ -92,6 +92,7 @@ static PyObject *surf_convert_alpha (PyObject *self, PyObject *args);
 static PyObject *surf_set_clip (PyObject *self, PyObject *args);
 static PyObject *surf_get_clip (PyObject *self);
 static PyObject *surf_blit (PyObject *self, PyObject *args, PyObject *keywds);
+static PyObject *surf_blits (PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *surf_fill (PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *surf_scroll (PyObject *self,
                               PyObject *args, PyObject *keywds);
@@ -190,6 +191,8 @@ static struct PyMethodDef surface_methods[] = {
       DOC_SURFACEFILL },
     { "blit", (PyCFunction) surf_blit, METH_VARARGS | METH_KEYWORDS,
       DOC_SURFACEBLIT },
+    { "blits", (PyCFunction) surf_blits, METH_VARARGS | METH_KEYWORDS,
+      DOC_SURFACEBLITS },
 
     { "scroll", (PyCFunction) surf_scroll, METH_VARARGS | METH_KEYWORDS,
       DOC_SURFACESCROLL },
@@ -1591,6 +1594,131 @@ surf_blit (PyObject *self, PyObject *args, PyObject *keywds)
 
     return PyRect_New (&dest_rect);
 }
+
+static PyObject*
+surf_blits (PyObject* self, PyObject* args, PyObject* keywds)
+{
+    SDL_Surface *src;
+    SDL_Surface *dest = PySurface_AsSurface (self);
+    GAME_Rect *src_rect;
+    GAME_Rect temp;
+
+    PyObject *srcobject;
+    PyObject *argrect = NULL;
+    SDL_Rect dest_rect;
+    SDL_Rect sdlsrc_rect;
+
+    // check cannot blit to opengl surfaces
+    if (dest->flags & SDL_OPENGL &&
+        !(dest->flags & (SDL_OPENGLBLIT & ~SDL_OPENGL)))
+        return RAISE (PyExc_SDLError,
+                      "Cannot blit to OPENGL Surfaces (OPENGLBLIT is ok)");
+
+    int dx, dy;
+    int sx, sy;
+
+    PyObject *list;
+    PyObject *inner_list;
+    PyObject *iterator;
+    PyObject *pos;
+//    PyObject *area;
+//    PyObject *flags;
+
+//    Sequence protocol
+//    PyObject* obj;
+//    PyObject* seq;
+//    int i, len;
+//
+//    seq = PySequence_Fast(obj, "expected a sequence");
+//    len = PySequence_Size(obj);
+//
+//    for (i=0; i<len; i++) {
+//        item = PySequence_Fast_GET_ITEM(seq, i);
+//
+//
+//    }
+//    Py_DECREF(seq);
+
+    // Iterator protocol
+    if (!PyArg_ParseTuple(args, "O", &iterator))
+        return NULL;
+
+    if (!PyIter_Check(iterator))
+        return RAISE (PyExc_TypeError,
+                      "Argument must be an iterator");
+
+    if (iterator == NULL)
+        return RAISE (PyExc_TypeError,
+                      "Argument must be an iterator");
+
+    while (inner_list = PyIter_Next(iterator))
+    {
+        src = PySequence_GetItem (inner_list, 0);
+        pos = PySequence_GetItem (inner_list, 1);
+        area = PySequence_GetItem (inner_list, 2);
+        flags = PySequence_GetItem (inner_list, 3);
+
+        inner_blit(self, src, pos, src_rect, 0);
+
+        /* release reference when done */
+        Py_DECREF(inner_list);
+        // Py_DECREF(src);
+        // Py_DECREF(pos);
+    }
+
+    Py_DECREF(iterator);
+
+    if (PyErr_Occurred()) {
+        /* propagate error */
+    }
+    else {
+        /* continue doing useful work */
+    }
+
+    Py_RETURN_NONE;
+}
+
+int inner_blit(PyObject* self, GAME_Rect* dest_rect, )
+{
+    // read the value as top left corner or a rect
+    if ((src_rect = GameRect_FromObject (pos, &temp))) {
+        dx = src_rect->x;
+        dy = src_rect->y;
+    }
+    else if (TwoIntsFromObj (pos, &sx, &sy)) {
+        dx = sx;
+        dy = sy;
+    }
+    else
+        return RAISE (PyExc_TypeError, "invalid destination position for blit");
+
+    // TODO: get from the list
+    // source rect
+    temp.x = temp.y = 0;
+    temp.w = src->w;
+    temp.h = src->h;
+    src_rect = &temp;
+
+    // get values ready for the SDL call
+    dest_rect.x = (short) dx;
+    dest_rect.y = (short) dy;
+    dest_rect.w = (unsigned short) src_rect->w;
+    dest_rect.h = (unsigned short) src_rect->h;
+    sdlsrc_rect.x = (short) src_rect->x;
+    sdlsrc_rect.y = (short) src_rect->y;
+    sdlsrc_rect.w = (unsigned short) src_rect->w;
+    sdlsrc_rect.h = (unsigned short) src_rect->h;
+
+// test segfaults
+//        src = PySurface_AsSurface (srcobject);
+//        if (!dest || !src)
+//            return RAISE (PyExc_SDLError, "display Surface quit");
+
+    // should be JIT?
+    return PySurface_Blit (self, src, &dest_rect, &sdlsrc_rect, 0);
+
+}
+
 
 static PyObject*
 surf_scroll (PyObject *self, PyObject *args, PyObject *keywds)

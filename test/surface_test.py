@@ -621,6 +621,35 @@ class SurfaceTypeTest(unittest.TestCase):
 
         self.fail()
 
+    def test_blits(self):
+        # Skip test_image_convert_bug_131 for headless tests.
+        if os.environ.get('SDL_VIDEODRIVER') == 'dummy':
+            return
+
+        pygame.display.init()
+        pygame.display.set_mode((640, 480))
+        dst = pygame.display.get_surface()
+
+        # build the array for blitting
+        blit_list = list()
+        for i in range(12):
+            s = pygame.Surface((48, 480), pygame.SRCALPHA, 32)
+            s.fill((i * 10, i * 11, i * 12))
+            pos = i * 48, 0
+            blit_list.append((s, pos))
+
+        # test iterator protocol
+        dst.blits(iter(blit_list))
+        pygame.display.flip()
+        pygame.time.delay(2000)
+        dst.fill(0)
+
+        # test sequence protocol
+        dst.blits(blit_list)
+        pygame.display.flip()
+        pygame.time.delay(1000)
+        dst.fill(0)
+
     def test_blit__SRCALPHA_opaque_source(self):
         src = pygame.Surface( (256,256), SRCALPHA ,32)
         dst = src.copy()

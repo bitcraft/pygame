@@ -3,6 +3,8 @@
 
 #define DOC_SURFACEBLIT "blit(source, dest, area=None, special_flags = 0) -> Rect\ndraw one image onto another"
 
+#define DOC_SURFACEBLITS "blits(Sequence, track=False) -> None or Rects"
+
 #define DOC_SURFACECONVERT "convert(Surface) -> Surface\nconvert(depth, flags=0) -> Surface\nconvert(masks, flags=0) -> Surface\nconvert() -> Surface\nchange the pixel format of an image"
 
 #define DOC_SURFACECONVERTALPHA "convert_alpha(Surface) -> Surface\nconvert_alpha() -> Surface\nchange the pixel format of an image including per pixel alphas"
